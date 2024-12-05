@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Addressing System</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #664f14;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #8b8d06;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #141414;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #0f0f0f;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #080808;
+    }
+    #map {
+      display:none;
+      height: 600px;
+      margin-top: 10px;
+      border-radius: 8px;
+    }
+    .output {
+      margin-top: 20px;
+      font-size: 1.1rem;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Home Addressing System</h1>
+    <div class="form-group">
+      <button id="locateUserBtn">Locate Me</button>
+    </div>
+    <div class="form-group">
+      <label for="destinationCode">Enter Destination Code:</label>
+      <input type="text" id="destinationCode" placeholder="Enter 7-character code">
+    </div>
+    <div class="form-group">
+      <button id="showPathBtn">Show Path</button>
+    </div>
+    <div class="output" id="locationInfo"></div>
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+  <script>
+       const stateBoundaries = [
+    { name: "Abia", initials: "AB", lat: [4.5, 6.0], lng: [7.0, 8.5] },
+    { name: "Adamawa", initials: "AD", lat: [7.0, 10.5], lng: [11.0, 13.5] },
+    { name: "Akwa Ibom", initials: "AK", lat: [4.4, 5.6], lng: [7.2, 8.3] },
+    { name: "Anambra", initials: "AN", lat: [5.7, 6.8], lng: [6.6, 7.4] },
+    { name: "Bauchi", initials: "BA", lat: [9.3, 12.3], lng: [9.5, 11.5] },
+    { name: "Bayelsa", initials: "BY", lat: [4.1, 5.2], lng: [5.0, 6.5] },
+    { name: "Benue", initials: "BE", lat: [6.5, 8.5], lng: [7.2, 10.0] },
+    { name: "Borno", initials: "BO", lat: [10.5, 13.9], lng: [11.5, 14.7] },
+    { name: "Cross River", initials: "CR", lat: [4.4, 6.7], lng: [7.9, 9.5] },
+    { name: "Delta", initials: "DE", lat: [5.0, 6.8], lng: [5.0, 6.8] },
+    { name: "Ebonyi", initials: "EB", lat: [6.0, 6.7], lng: [7.5, 8.6] },
+    { name: "Edo", initials: "ED", lat: [5.7, 7.3], lng: [5.0, 6.7] },
+    { name: "Ekiti", initials: "EK", lat: [7.2, 7.8], lng: [4.8, 5.8] },
+    { name: "Enugu", initials: "EN", lat: [5.9, 7.2], lng: [7.0, 7.7] },
+    { name: "Gombe", initials: "GO", lat: [9.3, 12.1], lng: [10.1, 11.4] },
+    { name: "Imo", initials: "IM", lat: [5.4, 6.3], lng: [6.8, 7.2] },
+    { name: "Jigawa", initials: "JI", lat: [10.0, 12.0], lng: [8.8, 10.3] },
+    { name: "Kaduna", initials: "KD", lat: [9.0, 11.5], lng: [6.0, 8.5] },
+    { name: "Kano", initials: "KN", lat: [10.5, 12.3], lng: [8.0, 9.8] },
+    { name: "Katsina", initials: "KT", lat: [11.0, 13.2], lng: [7.5, 9.0] },
+    { name: "Kebbi", initials: "KE", lat: [10.0, 13.0], lng: [3.5, 6.5] },
+    { name: "Kogi", initials: "KO", lat: [6.5, 8.5], lng: [5.0, 7.7] },
+    { name: "Kwara", initials: "KW", lat: [8.0, 10.0], lng: [3.8, 6.0] },
+    { name: "Lagos", initials: "LA", lat: [6.4, 6.8], lng: [3.1, 3.7] },
+    { name: "Nasarawa", initials: "NA", lat: [7.0, 9.0], lng: [8.0, 9.8] },
+    { name: "Niger", initials: "NI", lat: [8.5, 11.5], lng: [5.0, 7.5] },
+    { name: "Ogun", initials: "OY", lat: [6.5, 7.5], lng: [2.8, 4.2] },
+    { name: "Ondo", initials: "ON", lat: [6.5, 7.7], lng: [4.5, 5.8] },
+    { name: "Osun", initials: "OS", lat: [7.0, 8.0], lng: [4.0, 5.2] },
+    { name: "Oyo", initials: "OG", lat: [7.0, 9.0], lng: [3.0, 4.8] },
+    { name: "Plateau", initials: "PL", lat: [8.5, 10.5], lng: [8.3, 10.5] },
+    { name: "Rivers", initials: "RI", lat: [4.5, 5.8], lng: [6.4, 7.6] },
+    { name: "Sokoto", initials: "SO", lat: [12.0, 13.8], lng: [4.0, 6.0] },
+    { name: "Taraba", initials: "TA", lat: [6.5, 9.0], lng: [9.0, 12.0] },
+    { name: "Yobe", initials: "YO", lat: [10.0, 13.0], lng: [10.0, 12.0] },
+    { name: "Zamfara", initials: "ZA", lat: [11.0, 13.0], lng: [5.0, 7.0] },
+    { name: "Federal Capital Territory (FCT)", initials: "FC", lat: [8.5, 9.5], lng: [7.0, 8.0] }
+];
+
+
+    const map = L.map('map').setView([7.3775, 3.947], 13);
+    L.tileLayer('https://a.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+
+    let popup = L.popup();
+    let userLocationMarker;
+    let routeControl;
+
+    function getStateInitials(lat, lng) {
+    for (const state of stateBoundaries) {
+        const { initials, lat: latRange, lng: lngRange } = state;
+        if (lat >= latRange[0] && lat <= latRange[1] && lng >= lngRange[0] && lng <= lngRange[1]) {
+            return initials;
+        }
+    }
+    return 'N.A'; 
+}
+
+
+    function uniquecode(lat, lng, stateInitials) {
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      const letter1 = letters[Math.abs(Math.floor(lat * 100)) % 26];
+      const letter2 = letters[Math.abs(Math.floor(lng * 100)) % 26];
+      const num1 = numbers[Math.abs(Math.floor(lat * 1000)) % 10];
+      const num2 = numbers[Math.abs(Math.floor(lng * 1000)) % 10];
+      const num3 = numbers[Math.abs(Math.floor(lat * lng * 1000)) % 10];
+
+      return `${stateInitials}${'-'}${letter1}${num1}${letter2}${num2}${num3}`;
+    }
+
+    document.getElementById('locateUserBtn').addEventListener('click', () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const { latitude, longitude } = position.coords;
+            const stateInitials = getStateInitials(latitude, longitude);
+            const locationCode =uniquecode(latitude, longitude, stateInitials);
+
+            popup
+              .setLatLng([latitude, longitude])
+              .setContent(`
+                <p><strong>Unique Code:</strong> ${locationCode}</p>
+              `)
+              .openOn(map);
+            map.setView([latitude, longitude], 15);
+
+            document.getElementById('locationInfo').innerText = `Your Location Code: ${locationCode}`;
+            document.getElementById('map').style.display = 'block';
+
+            if (userLocationMarker) {
+              userLocationMarker.setLatLng([latitude, longitude]);
+            } else {
+              userLocationMarker = L.marker([latitude, longitude]).addTo(map);
+            }
+          },
+          error => {
+            document.getElementById('locationInfo').innerText = 'Unable to retrieve your location.';
+          }
+        );
+      } else {
+        alert('Geolocation is not supported by this browser.');
+      }
+    });
+
+    document.getElementById('showPathBtn').addEventListener('click', () => {
+      const destinationCode = document.getElementById('destinationCode').value;
+
+      if (!destinationCode) {
+        alert('Please enter a destination code.');
+        return;
+      }
+
+      let destinationCoords;
+      
+      if (destinationCode === 'ONC4X97') {
+        destinationCoords = [8.338965, 4.913882]; 7.373135, 3.867663                                                                                                                                            
+      } else {
+        alert('Invalid destination code.');
+        return;
+      }
+
+      if (userLocationMarker) {
+        const userLatLng = userLocationMarker.getLatLng();
+
+        if (routeControl) {
+          routeControl.setWaypoints([userLatLng, destinationCoords]);
+        } else {
+          routeControl = L.Routing.control({
+            waypoints: [userLatLng, destinationCoords],
+            routeWhileDragging: true,
+          }).addTo(map);
+        }
+
+        document.getElementById('map').style.display = 'block';
+      } else {
+        alert('Please locate yourself first.');
+      }
+    });
+  </script>
+</body>
+</html>
